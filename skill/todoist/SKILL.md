@@ -8,9 +8,15 @@ description: Use the todoist CLI to manage Todoist tasks from terminal workflows
 ## Quick start
 
 ```bash
-bun link
+bun add -g @vforsh/todoist
 printf "$TODOIST_API_TOKEN" | todoist cfg set apiToken -
 todoist doctor
+```
+
+Without global install:
+
+```bash
+bunx @vforsh/todoist doctor
 ```
 
 Examples:

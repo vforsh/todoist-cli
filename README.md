@@ -5,8 +5,13 @@ Bun-based Todoist CLI focused on automation-friendly workflows.
 ## Install
 
 ```bash
-bun install
-bun link
+bun add -g @vforsh/todoist
+```
+
+Run without global install:
+
+```bash
+bunx @vforsh/todoist --help
 ```
 
 ## Configure
