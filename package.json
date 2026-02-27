@@ -1,5 +1,5 @@
 {
-  "name": "@vforsh/todoist-cli",
+  "name": "@vforsh/todoist",
   "version": "0.1.0",
   "description": "Bun-based Todoist CLI for task workflows and automation-friendly setup.",
   "type": "module",
@@ -9,7 +9,11 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "bun test",
-    "cmd": "bun run bin/todoist"
+    "cmd": "bun run bin/todoist",
+    "publish:npm": "npm publish --access public"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "repository": {
     "type": "git",

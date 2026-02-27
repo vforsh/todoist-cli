@@ -10,15 +10,12 @@ const schema = z
   .object({
     endpoint: z.string().url().optional(),
     apiToken: z.string().min(1).optional(),
-    region: z.string().min(1).optional(),
     timeout: z.number().int().positive().optional(),
     retries: z.number().int().min(0).max(10).optional()
-  })
-  .strict();
+  });
 
 const DEFAULTS: EffectiveConfig = {
   endpoint: "https://api.todoist.com",
-  region: "global",
   timeout: 15000,
   retries: 2
 };
@@ -66,7 +63,6 @@ export function resolveEffectiveConfig(stored: StoredConfig, env: NodeJS.Process
 
   const merged: EffectiveConfig = {
     endpoint: env.TODOIST_ENDPOINT || stored.endpoint || DEFAULTS.endpoint,
-    region: env.TODOIST_REGION || stored.region || DEFAULTS.region,
     apiToken: env.TODOIST_API_TOKEN || stored.apiToken,
     timeout: envTimeout ?? stored.timeout ?? DEFAULTS.timeout,
     retries: envRetries ?? stored.retries ?? DEFAULTS.retries
@@ -84,7 +80,6 @@ export function redactConfig(config: StoredConfig | EffectiveConfig): Record<str
   return {
     endpoint: config.endpoint,
     apiToken: config.apiToken ? "***redacted***" : undefined,
-    region: config.region,
     timeout: config.timeout,
     retries: config.retries
   };

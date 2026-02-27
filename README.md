@@ -25,7 +25,6 @@ todoist cfg set endpoint=https://api.todoist.com retries=2 timeout=15000
 Environment variables override config values:
 - `TODOIST_API_TOKEN`
 - `TODOIST_ENDPOINT`
-- `TODOIST_REGION`
 - `TODOIST_TIMEOUT`
 - `TODOIST_RETRIES`
 
@@ -33,6 +32,7 @@ Environment variables override config values:
 
 ```bash
 todoist task add "Buy milk" --priority 4
+todoist task add "Pay rent" --due-string "tomorrow 09:00" --reminder 60 --reminder 10
 todoist task list --limit 10 --plain
 todoist task done <taskId>
 todoist task delete <taskId>

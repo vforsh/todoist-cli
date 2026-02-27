@@ -8,7 +8,6 @@ function applyOverrides(config: ReturnType<typeof resolveEffectiveConfig>, opts:
   return {
     ...config,
     endpoint: opts.endpoint || config.endpoint,
-    region: opts.region || config.region,
     timeout: opts.timeout ? Number(opts.timeout) : config.timeout,
     retries: opts.retries ? Number(opts.retries) : config.retries
   };
@@ -45,7 +44,17 @@ export function createTaskCommand(): Command {
     .option("--project-id <projectId>", "Project ID")
     .option("--due-string <dueString>", "Natural language due date")
     .option("--priority <priority>", "Priority 1-4")
-    .action(async (content: string, opts: { projectId?: string; dueString?: string; priority?: string }) => {
+    .option(
+      "--reminder <value>",
+      "Reminder value. Repeat for multiple reminders. Number => minutes before due, otherwise absolute due date/time string.",
+      (value: string, previous: string[] = []) => [...previous, value],
+      []
+    )
+    .action(
+      async (
+        content: string,
+        opts: { projectId?: string; dueString?: string; priority?: string; reminder: string[] }
+      ) => {
       const globals = command.optsWithGlobals() as Record<string, string | undefined>;
       const mode = detectOutputMode(globals);
       const stored = await loadStoredConfig();
@@ -59,7 +68,8 @@ export function createTaskCommand(): Command {
         content,
         projectId: opts.projectId,
         dueString: opts.dueString,
-        priority
+        priority,
+        reminders: opts.reminder
       });
       printData(mode, { task }, [task.id]);
     });

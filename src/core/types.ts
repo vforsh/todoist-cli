@@ -8,13 +8,11 @@ export type GlobalOptions = {
   timeout?: string;
   retries?: string;
   endpoint?: string;
-  region?: string;
 };
 
 export type EffectiveConfig = {
   endpoint: string;
   apiToken?: string;
-  region: string;
   timeout: number;
   retries: number;
 };

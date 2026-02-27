@@ -12,7 +12,7 @@ import { detectOutputMode, printData } from "../../core/output.ts";
 import { CliError } from "../../lib/errors.ts";
 import { readAllStdin, readStdinTrimmed } from "../../lib/io.ts";
 
-const allowedKeys = new Set(["endpoint", "apiToken", "region", "timeout", "retries"]);
+const allowedKeys = new Set(["endpoint", "apiToken", "timeout", "retries"]);
 
 type ConfigValue = string | number | undefined;
 

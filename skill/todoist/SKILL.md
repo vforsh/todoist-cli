@@ -17,13 +17,14 @@ Examples:
 
 ```bash
 todoist task add "Write release notes"
+todoist task add "Standup prep" --due-string "tomorrow 10:00" --reminder 30 --reminder 5
 todoist task list --limit 20 --plain
 todoist task done 1234567890
 ```
 
 ## Commands
 
-- `todoist task add <content>`: create task
+- `todoist task add <content>`: create task (supports repeated `--reminder`)
 - `todoist task list`: list tasks
 - `todoist task done <taskId>`: complete task
 - `todoist task delete <taskId>`: delete task
@@ -40,7 +41,6 @@ todoist task done 1234567890
 - `--timeout <ms>`
 - `--retries <n>`
 - `--endpoint <url>`
-- `--region <name>`
 
 ## Common errors
 

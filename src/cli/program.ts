@@ -18,7 +18,6 @@ export function buildProgram(): Command {
     .option("--timeout <ms>", "Request timeout in ms")
     .option("--retries <n>", "Retry count")
     .option("--endpoint <url>", "Todoist API endpoint")
-    .option("--region <name>", "Region label")
     .showHelpAfterError();
 
   program.addCommand(createTaskCommand());
