@@ -1,0 +1,36 @@
+{
+  "name": "@vforsh/todoist-cli",
+  "version": "0.1.0",
+  "description": "Bun-based Todoist CLI for task workflows and automation-friendly setup.",
+  "type": "module",
+  "bin": {
+    "todoist": "bin/todoist"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "bun test",
+    "cmd": "bun run bin/todoist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vforsh/todoist-cli.git"
+  },
+  "keywords": [
+    "todoist",
+    "cli",
+    "bun",
+    "tasks",
+    "automation"
+  ],
+  "author": "Vladislav Forsh",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^14.0.3",
+    "picocolors": "^1.1.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.9",
+    "typescript": "^5.9.3"
+  }
+}
