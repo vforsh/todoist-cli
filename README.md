@@ -33,9 +33,19 @@ Environment variables override config values:
 ```bash
 todoist task add "Buy milk" --priority 4
 todoist task add "Pay rent" --due-string "tomorrow 09:00" --reminder 60 --reminder 10
+todoist task update <taskId> --content "Buy milk and bread" --priority 4 --reminder 5
 todoist task list --limit 10 --plain
 todoist task done <taskId>
 todoist task delete <taskId>
+
+# aliases
+todoist task a "Quick task"
+todoist task create "Quick task 2"
+todoist task edit <taskId> --content "Updated"
+todoist task complete <taskId>
+todoist task rm <taskId>
+todoist task ls --limit 5 --plain
+todoist cfg get endpoint retries --plain
 ```
 
 Required infrastructure commands:

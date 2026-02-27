@@ -18,17 +18,19 @@ Examples:
 ```bash
 todoist task add "Write release notes"
 todoist task add "Standup prep" --due-string "tomorrow 10:00" --reminder 30 --reminder 5
+todoist task update 1234567890 --content "Write release notes v2" --priority 4 --reminder 10
 todoist task list --limit 20 --plain
 todoist task done 1234567890
 ```
 
 ## Commands
 
-- `todoist task add <content>`: create task (supports repeated `--reminder`)
-- `todoist task list`: list tasks
-- `todoist task done <taskId>`: complete task
-- `todoist task delete <taskId>`: delete task
-- `todoist cfg ls|get|set|unset|path|import|export`: manage config
+- `todoist task add|a|create <content>`: create task (supports repeated `--reminder`)
+- `todoist task update|up|edit <taskId>`: update content/due/priority and optionally add reminders
+- `todoist task list|ls`: list tasks
+- `todoist task done|c|complete <taskId>`: complete task
+- `todoist task delete|del|rm <taskId>`: delete task
+- `todoist cfg ls|get|set|unset|path|import|export`: manage config (`ls` is the only config subcommand alias)
 - `todoist doctor` (alias `check`): readiness checks
 - `todoist skill`: prints install URL for this skill
 

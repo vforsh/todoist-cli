@@ -102,6 +102,30 @@ export class TodoistClient {
     return task;
   }
 
+  async updateTask(input: {
+    taskId: string;
+    content?: string;
+    dueString?: string;
+    priority?: number;
+    reminders?: string[];
+  }): Promise<TodoistTask> {
+    const task = await this.request<TodoistTask>({
+      method: "POST",
+      path: `/api/v1/tasks/${input.taskId}`,
+      body: {
+        content: input.content,
+        due_string: input.dueString,
+        priority: input.priority
+      }
+    });
+
+    if (input.reminders && input.reminders.length > 0) {
+      await this.addTaskReminders(input.taskId, input.reminders);
+    }
+
+    return task;
+  }
+
   async addTaskReminders(taskId: string, reminders: string[]): Promise<void> {
     const commands: ReminderCommand[] = reminders.map((value) => {
       const parsed = parseReminderValue(value);
