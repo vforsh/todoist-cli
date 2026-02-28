@@ -4,6 +4,10 @@ import { detectOutputMode, printData } from "../../core/output.ts";
 import { TodoistClient } from "../../core/todoist.ts";
 import { CliError } from "../../lib/errors.ts";
 
+function normalizeSearchText(value: string): string {
+  return value.replace(/\u00A0/g, " ").trim().replace(/\s+/g, " ").toLocaleLowerCase();
+}
+
 function applyOverrides(config: ReturnType<typeof resolveEffectiveConfig>, opts: Record<string, string | undefined>) {
   return {
     ...config,
@@ -37,6 +41,58 @@ export function createTaskCommand(): Command {
       const sliced = list.slice(0, limit);
       printData(mode, { tasks: sliced, count: sliced.length }, sliced.map((task) => `${task.id}\t${task.content}`));
     });
+
+  command
+    .command("find")
+    .aliases(["search", "f"])
+    .description("Find tasks by content text")
+    .argument("<query>", "Search query")
+    .option("--project-id <projectId>", "Filter by project")
+    .option("--limit <n>", "Max matches to return", "20")
+    .option("--all", "Return all matches")
+    .option("--exact", "Require exact normalized content match")
+    .action(
+      async (query: string, opts: { projectId?: string; limit: string; all?: boolean; exact?: boolean }) => {
+        const globals = command.optsWithGlobals() as Record<string, string | undefined>;
+        const mode = detectOutputMode(globals);
+        const stored = await loadStoredConfig();
+        const cfg = applyOverrides(resolveEffectiveConfig(stored), globals);
+        const client = new TodoistClient(cfg);
+
+        const normalizedQuery = normalizeSearchText(query);
+        if (!normalizedQuery) {
+          throw new CliError("<query> must not be empty", 2);
+        }
+
+        const list = await client.listTasks({
+          projectId: opts.projectId,
+          filter: `search: ${query}`
+        });
+
+        const matches = list.filter((task) => {
+          const normalizedContent = normalizeSearchText(task.content);
+          if (opts.exact) {
+            return normalizedContent === normalizedQuery;
+          }
+          return normalizedContent.includes(normalizedQuery);
+        });
+
+        let limited = matches;
+        if (!opts.all) {
+          const limit = Number(opts.limit);
+          if (!Number.isFinite(limit) || limit <= 0) {
+            throw new CliError("--limit must be a positive number", 2);
+          }
+          limited = matches.slice(0, limit);
+        }
+
+        printData(
+          mode,
+          { tasks: limited, count: limited.length },
+          limited.map((task) => `${task.id}\t${task.content}`)
+        );
+      }
+    );
 
   command
     .command("add")

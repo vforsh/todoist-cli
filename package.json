@@ -1,6 +1,6 @@
 {
   "name": "@vforsh/todoist",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Bun-based Todoist CLI for task workflows and automation-friendly setup.",
   "type": "module",
   "bin": {

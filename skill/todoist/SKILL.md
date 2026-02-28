@@ -32,6 +32,7 @@ todoist task done 1234567890
 ## Commands
 
 - `todoist task add|a|create <content>`: create task (supports repeated `--reminder`)
+- `todoist task find|search|f <query>`: find tasks by text (`--exact`, `--project-id`, `--limit`, `--all`)
 - `todoist task update|up|edit <taskId>`: update content/due/priority and optionally add reminders
 - `todoist task list|ls`: list tasks
 - `todoist task done|c|complete <taskId>`: complete task
