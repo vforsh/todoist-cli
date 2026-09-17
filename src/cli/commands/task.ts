@@ -99,6 +99,7 @@ export function createTaskCommand(): Command {
     .aliases(["a", "create"])
     .description("Add a new task")
     .argument("<content>")
+    .option("--description <description>", "Task description")
     .option("--project-id <projectId>", "Project ID")
     .option("--due-string <dueString>", "Natural language due date")
     .option("--priority <priority>", "Priority 1-4")
@@ -111,26 +112,28 @@ export function createTaskCommand(): Command {
     .action(
       async (
         content: string,
-        opts: { projectId?: string; dueString?: string; priority?: string; reminder: string[] }
+        opts: { description?: string; projectId?: string; dueString?: string; priority?: string; reminder: string[] }
       ) => {
-      const globals = command.optsWithGlobals() as Record<string, string | undefined>;
-      const mode = detectOutputMode(globals);
-      const stored = await loadStoredConfig();
-      const cfg = applyOverrides(resolveEffectiveConfig(stored), globals);
-      const client = new TodoistClient(cfg);
-      const priority = opts.priority ? Number(opts.priority) : undefined;
-      if (priority !== undefined && (priority < 1 || priority > 4)) {
-        throw new CliError("--priority must be in range 1..4", 2);
+        const globals = command.optsWithGlobals() as Record<string, string | undefined>;
+        const mode = detectOutputMode(globals);
+        const stored = await loadStoredConfig();
+        const cfg = applyOverrides(resolveEffectiveConfig(stored), globals);
+        const client = new TodoistClient(cfg);
+        const priority = opts.priority ? Number(opts.priority) : undefined;
+        if (priority !== undefined && (priority < 1 || priority > 4)) {
+          throw new CliError("--priority must be in range 1..4", 2);
+        }
+        const task = await client.addTask({
+          content,
+          description: opts.description,
+          projectId: opts.projectId,
+          dueString: opts.dueString,
+          priority,
+          reminders: opts.reminder
+        });
+        printData(mode, { task }, [task.id]);
       }
-      const task = await client.addTask({
-        content,
-        projectId: opts.projectId,
-        dueString: opts.dueString,
-        priority,
-        reminders: opts.reminder
-      });
-      printData(mode, { task }, [task.id]);
-    });
+    );
 
   command
     .command("done")
@@ -153,6 +156,7 @@ export function createTaskCommand(): Command {
     .description("Update an existing task")
     .argument("<taskId>")
     .option("--content <content>", "Updated task content")
+    .option("--description <description>", 'Updated task description (use "" to clear)')
     .option("--due-string <dueString>", "Updated natural language due date")
     .option("--priority <priority>", "Updated priority 1-4")
     .option(
@@ -164,7 +168,7 @@ export function createTaskCommand(): Command {
     .action(
       async (
         taskId: string,
-        opts: { content?: string; dueString?: string; priority?: string; reminder: string[] }
+        opts: { content?: string; description?: string; dueString?: string; priority?: string; reminder: string[] }
       ) => {
         const globals = command.optsWithGlobals() as Record<string, string | undefined>;
         const mode = detectOutputMode(globals);
@@ -172,8 +176,11 @@ export function createTaskCommand(): Command {
         const cfg = applyOverrides(resolveEffectiveConfig(stored), globals);
         const client = new TodoistClient(cfg);
 
-        if (!opts.content && !opts.dueString && !opts.priority && opts.reminder.length === 0) {
-          throw new CliError("No updates provided. Use --content, --due-string, --priority, or --reminder.", 2);
+        const hasUpdates = Boolean(
+          opts.content || opts.description !== undefined || opts.dueString || opts.priority || opts.reminder.length > 0
+        );
+        if (!hasUpdates) {
+          throw new CliError("No updates provided. Use --content, --description, --due-string, --priority, or --reminder.", 2);
         }
 
         const priority = opts.priority ? Number(opts.priority) : undefined;
@@ -184,6 +191,7 @@ export function createTaskCommand(): Command {
         const task = await client.updateTask({
           taskId,
           content: opts.content,
+          description: opts.description,
           dueString: opts.dueString,
           priority,
           reminders: opts.reminder

@@ -37,8 +37,11 @@ Environment variables override config values:
 
 ```bash
 todoist task add "Buy milk" --priority 4
+todoist task add "Buy milk" --description "Two cartons of oat milk"
 todoist task add "Pay rent" --due-string "tomorrow 09:00" --reminder 60 --reminder 10
 todoist task update <taskId> --content "Buy milk and bread" --priority 4 --reminder 5
+todoist task update <taskId> --description "One carton of oat milk"
+todoist task update <taskId> --description ""
 todoist task list --limit 10 --plain
 todoist task find "взносы 14 348" --exact
 todoist task done <taskId>
@@ -55,6 +58,10 @@ todoist task search "rent"
 todoist task f "взносы" --project-id <projectId> --all
 todoist cfg get endpoint retries --plain
 ```
+
+Use `--description <description>` with `task add` or `task update` to set a task's
+description. Updating replaces the description; `--description ""` clears it.
+Omitting the option on update leaves the existing description unchanged.
 
 Required infrastructure commands:
 

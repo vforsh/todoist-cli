@@ -79,6 +79,7 @@ export class TodoistClient {
 
   async addTask(input: {
     content: string;
+    description?: string;
     projectId?: string;
     dueString?: string;
     priority?: number;
@@ -89,6 +90,7 @@ export class TodoistClient {
       path: "/api/v1/tasks",
       body: {
         content: input.content,
+        description: input.description,
         project_id: input.projectId,
         due_string: input.dueString,
         priority: input.priority
@@ -105,6 +107,7 @@ export class TodoistClient {
   async updateTask(input: {
     taskId: string;
     content?: string;
+    description?: string;
     dueString?: string;
     priority?: number;
     reminders?: string[];
@@ -114,6 +117,7 @@ export class TodoistClient {
       path: `/api/v1/tasks/${input.taskId}`,
       body: {
         content: input.content,
+        description: input.description,
         due_string: input.dueString,
         priority: input.priority
       }
