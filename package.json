@@ -1,11 +1,16 @@
 {
   "name": "@vforsh/todoist",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Bun-based Todoist CLI for task workflows and automation-friendly setup.",
   "type": "module",
   "bin": {
     "todoist": "bin/todoist"
   },
+  "files": [
+    "bin",
+    "src",
+    "skill"
+  ],
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "bun test",
