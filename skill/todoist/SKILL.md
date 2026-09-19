@@ -1,6 +1,6 @@
 ---
 name: todoist
-description: Use the todoist CLI to manage Todoist tasks from terminal workflows. Trigger on todoist tasks, add/list/complete/delete, todo CLI automation.
+description: Use the todoist CLI to manage Todoist tasks, projects, sections, metadata, and automation-friendly output.
 ---
 
 # todoist
@@ -19,27 +19,42 @@ Without global install:
 bunx @vforsh/todoist doctor
 ```
 
-Examples:
+## Common workflows
 
 ```bash
-todoist task add "Write release notes"
-todoist task add "Standup prep" --due-string "tomorrow 10:00" --reminder 30 --reminder 5
-todoist task update 1234567890 --content "Write release notes v2" --priority 4 --reminder 10
+todoist project list "Work" --plain
+todoist section list --project "Work" --plain
+todoist task add "Write release notes" --project "Work" --section "Ready"
+todoist task add "Review" --label release --label urgent --duration 30 --duration-unit minute
+todoist task update 1234567890 --description "Details" --deadline 2026-09-30
+todoist task update 1234567890 --description "" --label ""
+todoist task show 1234567890 --json
 todoist task list --limit 20 --plain
 todoist task done 1234567890
 ```
 
 ## Commands
 
-- `todoist task add|a|create <content>`: create task (supports repeated `--reminder`)
-- `todoist task find|search|f <query>`: find tasks by text (`--exact`, `--project-id`, `--limit`, `--all`)
-- `todoist task update|up|edit <taskId>`: update content/due/priority and optionally add reminders
-- `todoist task list|ls`: list tasks
-- `todoist task done|c|complete <taskId>`: complete task
-- `todoist task delete|del|rm <taskId>`: delete task
-- `todoist cfg ls|get|set|unset|path|import|export`: manage config (`ls` is the only config subcommand alias)
-- `todoist doctor` (alias `check`): readiness checks
-- `todoist skill`: prints install URL for this skill
+- `todoist project list|ls [query]`: discover/search projects (`--exact`, `--limit`)
+- `todoist section list|ls [query]`: discover/search sections (`--project`, `--project-id`, `--exact`, `--limit`)
+- `todoist task add|a|create <content>`: create a task
+- `todoist task update|up|edit <taskId>`: update metadata or move a task
+- `todoist task show|get <taskId>`: read complete active-task details and reminders
+- `todoist task find|search|f <query>`: find tasks by text
+- `todoist task list|ls`: list active tasks
+- `todoist task done|c|complete <taskId>`: complete a task
+- `todoist task delete|del|rm <taskId>`: delete a task
+- `todoist cfg ls|get|set|unset|path|import|export`: manage config
+- `todoist doctor|check`: readiness checks
+
+Task writes support `--description`, `--project`, `--project-id`, `--section`,
+`--section-id`, `--parent`, repeatable `--label`, `--due-string`, `--priority`,
+`--assignee`, `--duration` with `--duration-unit minute|day`,
+`--deadline <YYYY-MM-DD>`, and repeatable `--reminder`.
+
+On update, explicit empty strings clear description, labels, assignee, duration,
+deadline, or parent. Omitted options remain unchanged. Name resolution is exact
+after case/whitespace normalization; ambiguous or missing names are errors.
 
 ## Global flags
 
@@ -55,3 +70,5 @@ todoist task done 1234567890
 
 - Exit `1`: runtime or API failure
 - Exit `2`: invalid usage/flags
+- Reminders may be unavailable on the current Todoist plan.
+- `task show` reads active tasks only.

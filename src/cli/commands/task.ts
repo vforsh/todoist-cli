@@ -1,21 +1,19 @@
 import { Command } from "commander";
-import { loadStoredConfig, resolveEffectiveConfig } from "../../core/config.ts";
-import { detectOutputMode, printData } from "../../core/output.ts";
-import { TodoistClient } from "../../core/todoist.ts";
+import { normalizeResourceName } from "../../core/resources.ts";
+import { printData } from "../../core/output.ts";
+import type { TaskWriteInput, TodoistClient, TodoistTask } from "../../core/todoist.ts";
 import { CliError } from "../../lib/errors.ts";
-
-function normalizeSearchText(value: string): string {
-  return value.replace(/\u00A0/g, " ").trim().replace(/\s+/g, " ").toLocaleLowerCase();
-}
-
-function applyOverrides(config: ReturnType<typeof resolveEffectiveConfig>, opts: Record<string, string | undefined>) {
-  return {
-    ...config,
-    endpoint: opts.endpoint || config.endpoint,
-    timeout: opts.timeout ? Number(opts.timeout) : config.timeout,
-    retries: opts.retries ? Number(opts.retries) : config.retries
-  };
-}
+import { createCommandContext } from "../context.ts";
+import { positiveInteger } from "../values.ts";
+import {
+  addTaskWriteOptions,
+  buildTaskInput,
+  hasMove,
+  hasTaskMetadata,
+  moveTarget,
+  type TaskOptions
+} from "./task-options.ts";
+import { showTask } from "./task-show.ts";
 
 export function createTaskCommand(): Command {
   const command = new Command("task").description("Manage Todoist tasks");
@@ -24,21 +22,13 @@ export function createTaskCommand(): Command {
     .command("list")
     .alias("ls")
     .description("List tasks")
-    .option("--project-id <projectId>", "Filter by project")
+    .option("--project-id <projectId>", "Filter by project raw ID")
     .option("--filter <query>", "Todoist filter query")
     .option("--limit <n>", "Max tasks to return", "50")
     .action(async (opts: { projectId?: string; filter?: string; limit: string }) => {
-      const globals = command.optsWithGlobals() as Record<string, string | undefined>;
-      const mode = detectOutputMode(globals);
-      const stored = await loadStoredConfig();
-      const cfg = applyOverrides(resolveEffectiveConfig(stored), globals);
-      const client = new TodoistClient(cfg);
+      const { client, mode } = await createCommandContext(command);
       const list = await client.listTasks({ projectId: opts.projectId, filter: opts.filter });
-      const limit = Number(opts.limit);
-      if (!Number.isFinite(limit) || limit <= 0) {
-        throw new CliError("--limit must be a positive number", 2);
-      }
-      const sliced = list.slice(0, limit);
+      const sliced = list.slice(0, positiveInteger(opts.limit, "--limit"));
       printData(mode, { tasks: sliced, count: sliced.length }, sliced.map((task) => `${task.id}\t${task.content}`));
     });
 
@@ -47,93 +37,44 @@ export function createTaskCommand(): Command {
     .aliases(["search", "f"])
     .description("Find tasks by content text")
     .argument("<query>", "Search query")
-    .option("--project-id <projectId>", "Filter by project")
+    .option("--project-id <projectId>", "Filter by project raw ID")
     .option("--limit <n>", "Max matches to return", "20")
     .option("--all", "Return all matches")
     .option("--exact", "Require exact normalized content match")
-    .action(
-      async (query: string, opts: { projectId?: string; limit: string; all?: boolean; exact?: boolean }) => {
-        const globals = command.optsWithGlobals() as Record<string, string | undefined>;
-        const mode = detectOutputMode(globals);
-        const stored = await loadStoredConfig();
-        const cfg = applyOverrides(resolveEffectiveConfig(stored), globals);
-        const client = new TodoistClient(cfg);
+    .action(async (query: string, opts: { projectId?: string; limit: string; all?: boolean; exact?: boolean }) => {
+      const { client, mode } = await createCommandContext(command);
+      const normalizedQuery = normalizeResourceName(query);
+      if (!normalizedQuery) throw new CliError("<query> must not be empty", 2);
+      const list = await client.listTasks({ projectId: opts.projectId, filter: `search: ${query}` });
+      const matches = list.filter((task) => {
+        if (opts.projectId && task.project_id !== opts.projectId) return false;
+        const content = normalizeResourceName(task.content);
+        return opts.exact ? content === normalizedQuery : content.includes(normalizedQuery);
+      });
+      const limited = opts.all ? matches : matches.slice(0, positiveInteger(opts.limit, "--limit"));
+      printData(mode, { tasks: limited, count: limited.length }, limited.map((task) => `${task.id}\t${task.content}`));
+    });
 
-        const normalizedQuery = normalizeSearchText(query);
-        if (!normalizedQuery) {
-          throw new CliError("<query> must not be empty", 2);
-        }
-
-        const list = await client.listTasks({
-          projectId: opts.projectId,
-          filter: `search: ${query}`
-        });
-
-        const matches = list.filter((task) => {
-          const normalizedContent = normalizeSearchText(task.content);
-          if (opts.exact) {
-            return normalizedContent === normalizedQuery;
-          }
-          return normalizedContent.includes(normalizedQuery);
-        });
-
-        let limited = matches;
-        if (!opts.all) {
-          const limit = Number(opts.limit);
-          if (!Number.isFinite(limit) || limit <= 0) {
-            throw new CliError("--limit must be a positive number", 2);
-          }
-          limited = matches.slice(0, limit);
-        }
-
-        printData(
-          mode,
-          { tasks: limited, count: limited.length },
-          limited.map((task) => `${task.id}\t${task.content}`)
-        );
-      }
-    );
+  const add = addTaskWriteOptions(
+    command.command("add").aliases(["a", "create"]).description("Add a new task").argument("<content>"),
+    false
+  );
+  add.action(async (content: string, opts: TaskOptions) => {
+    const { client, mode } = await createCommandContext(command);
+    const input = await buildTaskInput(client, opts, false);
+    const task = await client.addTask({ ...input, content });
+    printData(mode, { task }, [task.id]);
+  });
 
   command
-    .command("add")
-    .aliases(["a", "create"])
-    .description("Add a new task")
-    .argument("<content>")
-    .option("--description <description>", "Task description")
-    .option("--project-id <projectId>", "Project ID")
-    .option("--due-string <dueString>", "Natural language due date")
-    .option("--priority <priority>", "Priority 1-4")
-    .option(
-      "--reminder <value>",
-      "Reminder value. Repeat for multiple reminders. Number => minutes before due, otherwise absolute due date/time string.",
-      (value: string, previous: string[] = []) => [...previous, value],
-      []
-    )
-    .action(
-      async (
-        content: string,
-        opts: { description?: string; projectId?: string; dueString?: string; priority?: string; reminder: string[] }
-      ) => {
-        const globals = command.optsWithGlobals() as Record<string, string | undefined>;
-        const mode = detectOutputMode(globals);
-        const stored = await loadStoredConfig();
-        const cfg = applyOverrides(resolveEffectiveConfig(stored), globals);
-        const client = new TodoistClient(cfg);
-        const priority = opts.priority ? Number(opts.priority) : undefined;
-        if (priority !== undefined && (priority < 1 || priority > 4)) {
-          throw new CliError("--priority must be in range 1..4", 2);
-        }
-        const task = await client.addTask({
-          content,
-          description: opts.description,
-          projectId: opts.projectId,
-          dueString: opts.dueString,
-          priority,
-          reminders: opts.reminder
-        });
-        printData(mode, { task }, [task.id]);
-      }
-    );
+    .command("show")
+    .alias("get")
+    .description("Show a complete active task")
+    .argument("<taskId>")
+    .action(async (taskId: string) => {
+      const { client, mode } = await createCommandContext(command);
+      await showTask(client, taskId, mode);
+    });
 
   command
     .command("done")
@@ -141,65 +82,27 @@ export function createTaskCommand(): Command {
     .description("Mark task complete")
     .argument("<taskId>")
     .action(async (taskId: string) => {
-      const globals = command.optsWithGlobals() as Record<string, string | undefined>;
-      const mode = detectOutputMode(globals);
-      const stored = await loadStoredConfig();
-      const cfg = applyOverrides(resolveEffectiveConfig(stored), globals);
-      const client = new TodoistClient(cfg);
+      const { client, mode } = await createCommandContext(command);
       await client.closeTask(taskId);
       printData(mode, { closed: taskId }, [taskId]);
     });
 
-  command
-    .command("update")
-    .aliases(["up", "edit"])
-    .description("Update an existing task")
-    .argument("<taskId>")
-    .option("--content <content>", "Updated task content")
-    .option("--description <description>", 'Updated task description (use "" to clear)')
-    .option("--due-string <dueString>", "Updated natural language due date")
-    .option("--priority <priority>", "Updated priority 1-4")
-    .option(
-      "--reminder <value>",
-      "Reminder value to add. Repeat for multiple reminders. Number => minutes before due, otherwise absolute due date/time string.",
-      (value: string, previous: string[] = []) => [...previous, value],
-      []
-    )
-    .action(
-      async (
-        taskId: string,
-        opts: { content?: string; description?: string; dueString?: string; priority?: string; reminder: string[] }
-      ) => {
-        const globals = command.optsWithGlobals() as Record<string, string | undefined>;
-        const mode = detectOutputMode(globals);
-        const stored = await loadStoredConfig();
-        const cfg = applyOverrides(resolveEffectiveConfig(stored), globals);
-        const client = new TodoistClient(cfg);
+  const update = addTaskWriteOptions(
+    command.command("update").aliases(["up", "edit"]).description("Update an existing task").argument("<taskId>")
+      .option("--content <content>", "Updated task content"),
+    true
+  );
+  update.action(async (taskId: string, opts: TaskOptions) => {
+    const { client, mode } = await createCommandContext(command);
+    const input = await buildTaskInput(client, opts, true);
+    const reminders = input.reminders ?? [];
+    if (!hasTaskMetadata(input) && !hasMove(input) && reminders.length === 0) {
+      throw new CliError("No updates provided. See todoist task update --help.", 2);
+    }
 
-        const hasUpdates = Boolean(
-          opts.content || opts.description !== undefined || opts.dueString || opts.priority || opts.reminder.length > 0
-        );
-        if (!hasUpdates) {
-          throw new CliError("No updates provided. Use --content, --description, --due-string, --priority, or --reminder.", 2);
-        }
-
-        const priority = opts.priority ? Number(opts.priority) : undefined;
-        if (priority !== undefined && (priority < 1 || priority > 4)) {
-          throw new CliError("--priority must be in range 1..4", 2);
-        }
-
-        const task = await client.updateTask({
-          taskId,
-          content: opts.content,
-          description: opts.description,
-          dueString: opts.dueString,
-          priority,
-          reminders: opts.reminder
-        });
-
-        printData(mode, { task }, [task.id]);
-      }
-    );
+    const task = await executeTaskUpdate(client, taskId, input);
+    printData(mode, { task }, [task.id]);
+  });
 
   command
     .command("delete")
@@ -207,14 +110,27 @@ export function createTaskCommand(): Command {
     .description("Delete task")
     .argument("<taskId>")
     .action(async (taskId: string) => {
-      const globals = command.optsWithGlobals() as Record<string, string | undefined>;
-      const mode = detectOutputMode(globals);
-      const stored = await loadStoredConfig();
-      const cfg = applyOverrides(resolveEffectiveConfig(stored), globals);
-      const client = new TodoistClient(cfg);
+      const { client, mode } = await createCommandContext(command);
       await client.deleteTask(taskId);
       printData(mode, { deleted: taskId }, [taskId]);
     });
 
   return command;
+}
+
+async function executeTaskUpdate(client: TodoistClient, taskId: string, input: TaskWriteInput): Promise<TodoistTask> {
+  const reminders = input.reminders ?? [];
+  if (!hasTaskMetadata(input) && reminders.length === 0) {
+    return client.moveTask(taskId, moveTarget(input));
+  }
+
+  let task: TodoistTask;
+  if (hasTaskMetadata(input)) {
+    task = await client.updateTask({ ...input, taskId });
+  } else {
+    await client.addTaskReminders(taskId, reminders);
+    task = await client.getTask(taskId);
+  }
+
+  return hasMove(input) ? client.moveTask(taskId, moveTarget(input)) : task;
 }
